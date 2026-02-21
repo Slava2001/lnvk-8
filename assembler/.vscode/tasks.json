@@ -1,0 +1,29 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "clean",
+            "command": "make",
+            "args": [
+                "-C", "${workspaceFolder}", "clean"
+            ],
+        },
+        {
+            "type": "cppbuild",
+            "label": "build",
+            "dependsOn": "clean",
+            "command": "make",
+            "args": [
+                "-C", "${workspaceFolder}"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ],
+    "version": "2.0.0"
+}

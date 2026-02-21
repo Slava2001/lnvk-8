@@ -1,0 +1,4 @@
+build
+asm
+*.asm
+.vscode/settings.json
