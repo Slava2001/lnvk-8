@@ -85,7 +85,7 @@ void vec_ ## func_suffix ## _replace_range(                                     
     if (this->capacity < this->size + val_cnt) {                                  \
         this->capacity = this->capacity + this->size + val_cnt;                   \
         this->data = mem_realloc(this->data, this->capacity * sizeof(type));      \
-    }                                                                            \
+    }                                                                             \
     ssize_t shift = (ssize_t)val_cnt -                                            \
                     ((ssize_t)end_index - (ssize_t)start_index + 1);              \
     if (shift > 0) {                                                              \
@@ -100,6 +100,7 @@ void vec_ ## func_suffix ## _replace_range(                                     
     for (size_t i = 0; i < val_cnt; i++) {                                        \
         this->data[start_index + i] = val[i];                                     \
     }                                                                             \
+    this->size = (size_t)((ssize_t)this->size + shift);                           \
 }
 
 #endif // VEC_H
