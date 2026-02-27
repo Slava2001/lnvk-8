@@ -16,6 +16,9 @@ vec_decl(Define, Define, define);
 typedef struct Define {
     VecChar name;
     VecChar val;
+    size_t file_index;
+    size_t line;
+    VecChar text;
 } Define;
 
 typedef struct SrcFile {

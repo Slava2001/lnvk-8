@@ -20,7 +20,7 @@
 #endif
 
 #define generic_log(lvl, fmt, ...) \
-    (void)fprintf(stderr, "%s:%d %s() "lvl": "fmt"\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__);
+    (void)fprintf(stderr, "%s:%d %s() "lvl": "fmt"\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
 #if DBG >= LOG_LVL
 #define logenter() logd("Enter")

@@ -16,7 +16,7 @@ char *trim_end(char *str);
 char *remove_comment(char *str);
 enum Directive parse_directive(char *str, char **arg);
 int get_include_path(char *ptr, VecChar *path);
-Define parse_define(char *str);
+Define parse_define(char *str, size_t file_index, size_t line, const char *line_text);
 int apply_defines(VecChar *text, VecDefine *defines);
 
 enum Directive {
@@ -87,13 +87,19 @@ enum Directive parse_directive(char *str, char **arg) {
     return DRV_NOT_DRV;
 }
 
-Define parse_define(char *str) {
+Define parse_define(char *str, size_t file_index, size_t line, const char *line_text) {
     Define def = {
         .name = vec_char_new(),
-        .val = vec_char_new()
+        .val = vec_char_new(),
+        .file_index = file_index,
+        .line = line,
+        .text = vec_char_new()
     };
 
-    while (!isspace(*str)) {
+    vec_char_pusha(&def.text, line_text, strlen(line_text));
+    vec_char_push(&def.text, 0);
+
+    while (*str && !isspace(*str)) {
         vec_char_push(&def.name, *str);
         str++;
     }
@@ -120,12 +126,12 @@ int apply_defines(VecChar *text, VecDefine *defines) {
         if (left && right) {
             const char *val = def->val.data;
             size_t val_len = def->val.size - 1;
-            size_t start = (size_t)(ptr - text->data);
-            size_t end = (size_t)(end_ptr - 1 - text->data);
+            size_t name_start = (size_t)(ptr - text->data);
+            size_t name_len = vec_char_length(&def->name) - 1;
             vec_char_replace_range(text,
                                    val, val_len,
-                                   start,
-                                   end);
+                                   name_start,
+                                   name_len);
             return 1;
         }
     }
@@ -167,7 +173,25 @@ void recursive_loading(SourceTree *ctx, const char *path) {
             continue;
         break;
         case DRV_DEFINE:
-            vec_define_push(&ctx->defines, parse_define(drv_arg));
+            Define def = parse_define(drv_arg, file_index, line_num, ptr);
+            for (size_t i = 0; i < vec_define_length(&ctx->defines); i++) {
+                Define *exist_def = vec_define_at(&ctx->defines, i);
+                const char *exist_name = exist_def->name.data;
+                if (!strcmp(exist_name, def.name.data)) {
+                    loge("Redefine \"%s\"\nat:              %s:%zu: %s\nfirst define at: %s:%zu: %s",
+                         def.name.data,
+                         vec_srcfile_at(&ctx->files, def.file_index)->name.data,
+                         def.line,
+                         def.text.data,
+                         vec_srcfile_at(&ctx->files, exist_def->file_index)->name.data,
+                         exist_def->line,
+                         exist_def->text.data
+
+                    );
+                    die(1, "compile. Fatal error");
+                }
+            }
+            vec_define_push(&ctx->defines, def);
             continue;
         break;
         case DRV_NOT_DRV:
@@ -203,9 +227,10 @@ void load_src_free(SourceTree *tree) {
     for (size_t i = 0; i < vec_define_length(&tree->defines); i++) {
         vec_char_del(&vec_define_at(&tree->defines, i)->name);
         vec_char_del(&vec_define_at(&tree->defines, i)->val);
+        vec_char_del(&vec_define_at(&tree->defines, i)->text);
     }
     for (size_t i = 0; i < vec_line_length(&tree->lines); i++) {
-        logi("line: %s:%zu %s",
+        logd("line: %s:%zu %s",
              vec_srcfile_at(&tree->files, vec_line_at(&tree->lines, i)->file_index)->name.data,
              vec_line_at(&tree->lines, i)->number,
              vec_line_at(&tree->lines, i)->text.data);
