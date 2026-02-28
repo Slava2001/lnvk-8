@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 enum TokenType {
+    TOK_UNKNOWN = 0,
     TOK_KW_NOP,
     TOK_KW_HALT,
     TOK_KW_MOV,
@@ -33,30 +34,19 @@ enum TokenType {
     TOK_KW_JNC,
     TOK_KW_CALL,
     TOK_KW_RET,
-    TOK_RG_0,
-    TOK_RG_1,
-    TOK_RG_2,
-    TOK_RG_3,
-    TOK_RG_4,
-    TOK_RG_5,
-    TOK_RG_6,
-    TOK_RG_7,
-    TOK_RG_8,
-    TOK_RG_9,
-    TOK_RG_10,
-    TOK_RG_11,
-    TOK_RG_12,
-    TOK_RG_13,
-    TOK_RG_14,
-    TOK_RG_15,
+    TOK_REG,
     TOK_LABEL_DEF,
     TOK_LABEL_REF,
     TOK_CONST,
-    TOK_ADDR,
+    TOK_ADDR_CONST,
     TOK_ADDR_LABEL,
-    TOK_UNKNOWN,
-    TOK_EOF
+    TOK_ADDR_REG_L,
+    TOK_ADDR_REG_H,
+    TOK_EOF,
+    TOK_COUNT
 };
+
+const char *token_type_to_str(enum TokenType type);
 
 typedef struct Token
 {
@@ -65,8 +55,9 @@ typedef struct Token
     size_t len;
     union
     {
-        uint8_t const_value;
-        uint16_t addres;
+        uint16_t const_val;
+        uint16_t address;
+        int reg;
         struct {
             const char *name;
             size_t len;

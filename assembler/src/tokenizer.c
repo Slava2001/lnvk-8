@@ -37,7 +37,56 @@ int parse_next_word(const char *word, size_t len, Token *out) {
     struct {
         const char *str;
         enum TokenType tok;
+        int reg;
     } words[] = {
+        { .str = "r0",   .tok = TOK_REG, .reg = 0  },
+        { .str = "r1",   .tok = TOK_REG, .reg = 1  },
+        { .str = "r2",   .tok = TOK_REG, .reg = 2  },
+        { .str = "r3",   .tok = TOK_REG, .reg = 3  },
+        { .str = "r4",   .tok = TOK_REG, .reg = 4  },
+        { .str = "r5",   .tok = TOK_REG, .reg = 5  },
+        { .str = "r6",   .tok = TOK_REG, .reg = 6  },
+        { .str = "r7",   .tok = TOK_REG, .reg = 7  },
+        { .str = "r8",   .tok = TOK_REG, .reg = 8  },
+        { .str = "r9",   .tok = TOK_REG, .reg = 9  },
+        { .str = "r10",  .tok = TOK_REG, .reg = 10 },
+        { .str = "r11",  .tok = TOK_REG, .reg = 11 },
+        { .str = "r12",  .tok = TOK_REG, .reg = 12 },
+        { .str = "r13",  .tok = TOK_REG, .reg = 13 },
+        { .str = "r14",  .tok = TOK_REG, .reg = 14 },
+        { .str = "r15",  .tok = TOK_REG, .reg = 15 },
+        { .str = "[r0",  .tok = TOK_ADDR_REG_H, .reg = 0  },
+        { .str = "[r1",  .tok = TOK_ADDR_REG_H, .reg = 1  },
+        { .str = "[r2",  .tok = TOK_ADDR_REG_H, .reg = 2  },
+        { .str = "[r3",  .tok = TOK_ADDR_REG_H, .reg = 3  },
+        { .str = "[r4",  .tok = TOK_ADDR_REG_H, .reg = 4  },
+        { .str = "[r5",  .tok = TOK_ADDR_REG_H, .reg = 5  },
+        { .str = "[r6",  .tok = TOK_ADDR_REG_H, .reg = 6  },
+        { .str = "[r7",  .tok = TOK_ADDR_REG_H, .reg = 7  },
+        { .str = "[r8",  .tok = TOK_ADDR_REG_H, .reg = 8  },
+        { .str = "[r9",  .tok = TOK_ADDR_REG_H, .reg = 9  },
+        { .str = "[r10", .tok = TOK_ADDR_REG_H, .reg = 10 },
+        { .str = "[r11", .tok = TOK_ADDR_REG_H, .reg = 11 },
+        { .str = "[r12", .tok = TOK_ADDR_REG_H, .reg = 12 },
+        { .str = "[r13", .tok = TOK_ADDR_REG_H, .reg = 13 },
+        { .str = "[r14", .tok = TOK_ADDR_REG_H, .reg = 14 },
+        { .str = "[r15", .tok = TOK_ADDR_REG_H, .reg = 15 },
+        { .str = "r0]",  .tok = TOK_ADDR_REG_L, .reg = 0  },
+        { .str = "r1]",  .tok = TOK_ADDR_REG_L, .reg = 1  },
+        { .str = "r2]",  .tok = TOK_ADDR_REG_L, .reg = 2  },
+        { .str = "r3]",  .tok = TOK_ADDR_REG_L, .reg = 3  },
+        { .str = "r4]",  .tok = TOK_ADDR_REG_L, .reg = 4  },
+        { .str = "r5]",  .tok = TOK_ADDR_REG_L, .reg = 5  },
+        { .str = "r6]",  .tok = TOK_ADDR_REG_L, .reg = 6  },
+        { .str = "r7]",  .tok = TOK_ADDR_REG_L, .reg = 7  },
+        { .str = "r8]",  .tok = TOK_ADDR_REG_L, .reg = 8  },
+        { .str = "r9]",  .tok = TOK_ADDR_REG_L, .reg = 9  },
+        { .str = "r10]", .tok = TOK_ADDR_REG_L, .reg = 10 },
+        { .str = "r11]", .tok = TOK_ADDR_REG_L, .reg = 11 },
+        { .str = "r12]", .tok = TOK_ADDR_REG_L, .reg = 12 },
+        { .str = "r13]", .tok = TOK_ADDR_REG_L, .reg = 13 },
+        { .str = "r14]", .tok = TOK_ADDR_REG_L, .reg = 14 },
+        { .str = "r15]", .tok = TOK_ADDR_REG_L, .reg = 15 },
         { .str = "nop",  .tok = TOK_KW_NOP  },
         { .str = "halt", .tok = TOK_KW_HALT },
         { .str = "mov",  .tok = TOK_KW_MOV  },
@@ -64,23 +113,7 @@ int parse_next_word(const char *word, size_t len, Token *out) {
         { .str = "jc",   .tok = TOK_KW_JC   },
         { .str = "jnc",  .tok = TOK_KW_JNC  },
         { .str = "call", .tok = TOK_KW_CALL },
-        { .str = "ret",  .tok = TOK_KW_RET  },
-        { .str = "r0",   .tok = TOK_RG_0    },
-        { .str = "r1",   .tok = TOK_RG_1    },
-        { .str = "r2",   .tok = TOK_RG_2    },
-        { .str = "r3",   .tok = TOK_RG_3    },
-        { .str = "r4",   .tok = TOK_RG_4    },
-        { .str = "r5",   .tok = TOK_RG_5    },
-        { .str = "r6",   .tok = TOK_RG_6    },
-        { .str = "r7",   .tok = TOK_RG_7    },
-        { .str = "r8",   .tok = TOK_RG_8    },
-        { .str = "r9",   .tok = TOK_RG_9    },
-        { .str = "r10",  .tok = TOK_RG_10   },
-        { .str = "r11",  .tok = TOK_RG_11   },
-        { .str = "r12",  .tok = TOK_RG_12   },
-        { .str = "r13",  .tok = TOK_RG_13   },
-        { .str = "r14",  .tok = TOK_RG_14   },
-        { .str = "r15",  .tok = TOK_RG_15   }
+        { .str = "ret",  .tok = TOK_KW_RET  }
     };
 
     for (size_t i = 0; i < sizeof(words)/sizeof(*words); i++) {
@@ -88,7 +121,8 @@ int parse_next_word(const char *word, size_t len, Token *out) {
             *out = (Token) {
                 .type = words[i].tok,
                 .word = word,
-                .len = len
+                .len = len,
+                .data.reg = words[i].reg
             };
             return 0;
         }
@@ -147,13 +181,13 @@ int parse_next_word(const char *word, size_t len, Token *out) {
     char *end;
     long tmp_value = strtol(tmp, &end, 0);
     if (!*end) {
-        reci(tmp_value < 0 || tmp_value > UINT8_MAX,
-             "parse const: out of uint8 range: %s", tmp);
+        reci(tmp_value < 0 || tmp_value > UINT16_MAX,
+             "parse const: out of uint16 range: %s", tmp);
         *out = (Token) {
             .type = TOK_CONST,
             .word = word,
             .len = len,
-            .data.const_value = (uint8_t)tmp_value
+            .data.const_val = (uint16_t)tmp_value
         };
         return 0;
     }
@@ -164,10 +198,10 @@ int parse_next_word(const char *word, size_t len, Token *out) {
             reci(tmp_addr_value < 0 || tmp_addr_value > UINT16_MAX,
                  "parse addr: out of uint16 range: %s", tmp + 1);
             *out = (Token) {
-                .type = TOK_ADDR,
+                .type = TOK_ADDR_CONST,
                 .word = word,
                 .len = len,
-                .data.addres = (uint16_t)tmp_addr_value
+                .data.address = (uint16_t)tmp_addr_value
             };
             return 0;
         }
@@ -197,4 +231,47 @@ Token tokenizer_next(Tokenizer *this) {
 
 void tokenizer_delete(Tokenizer *this) {
     memset(this, 0, sizeof(*this));
+}
+
+const char *token_type_to_str(enum TokenType type) {
+    const char *token_type_to_str[TOK_COUNT] = {
+        [TOK_UNKNOWN]    = "TOK_UNKNOWN",
+        [TOK_KW_NOP]     = "TOK_KW_NOP",
+        [TOK_KW_HALT]    = "TOK_KW_HALT",
+        [TOK_KW_MOV]     = "TOK_KW_MOV",
+        [TOK_KW_PUSH]    = "TOK_KW_PUSH",
+        [TOK_KW_POP]     = "TOK_KW_POP",
+        [TOK_KW_ADD]     = "TOK_KW_ADD",
+        [TOK_KW_ADC]     = "TOK_KW_ADC",
+        [TOK_KW_SUB]     = "TOK_KW_SUB",
+        [TOK_KW_SBC]     = "TOK_KW_SBC",
+        [TOK_KW_INC]     = "TOK_KW_INC",
+        [TOK_KW_DEC]     = "TOK_KW_DEC",
+        [TOK_KW_NEG]     = "TOK_KW_NEG",
+        [TOK_KW_SHL]     = "TOK_KW_SHL",
+        [TOK_KW_SHR]     = "TOK_KW_SHR",
+        [TOK_KW_AND]     = "TOK_KW_AND",
+        [TOK_KW_OR]      = "TOK_KW_OR",
+        [TOK_KW_XOR]     = "TOK_KW_XOR",
+        [TOK_KW_NOT]     = "TOK_KW_NOT",
+        [TOK_KW_CMP]     = "TOK_KW_CMP",
+        [TOK_KW_JMP]     = "TOK_KW_JMP",
+        [TOK_KW_JR]      = "TOK_KW_JR",
+        [TOK_KW_JZ]      = "TOK_KW_JZ",
+        [TOK_KW_JNZ]     = "TOK_KW_JNZ",
+        [TOK_KW_JC]      = "TOK_KW_JC",
+        [TOK_KW_JNC]     = "TOK_KW_JNC",
+        [TOK_KW_CALL]    = "TOK_KW_CALL",
+        [TOK_KW_RET]     = "TOK_KW_RET",
+        [TOK_REG]        = "TOK_REG",
+        [TOK_LABEL_DEF]  = "TOK_LABEL_DEF",
+        [TOK_LABEL_REF]  = "TOK_LABEL_REF",
+        [TOK_CONST]      = "TOK_CONST",
+        [TOK_ADDR_CONST] = "TOK_ADDR_CONST",
+        [TOK_ADDR_LABEL] = "TOK_ADDR_LABEL",
+        [TOK_ADDR_REG_L] = "TOK_ADDR_REG_L",
+        [TOK_ADDR_REG_H] = "TOK_ADDR_REG_H",
+        [TOK_EOF]        = "TOK_EOF"
+    };
+    return token_type_to_str[type];
 }
