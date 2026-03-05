@@ -13,12 +13,14 @@ int main(int argc, char *argv[]) {
     Tokenizer tokenizer = tokenizer_new(&src_tree);
     Asm assembler = asm_new(&tokenizer);
 
-    uint8_t output[65536];
-    ssize_t output_len = asm_assemble(&assembler, output, sizeof(output));
-    if (output_len < 0) {
-        loge("Failed to assemble");
-        return EXIT_FAILURE;
+    VecByte output = vec_byte_new();
+    reci(asm_assemble(&assembler, &output), "assemble");
+    printf("Assembled output (%zu bytes):\n", vec_byte_length(&output));
+    for (size_t i = 0; i < vec_byte_length(&output); i++) {
+        printf("%02X ", *vec_byte_at(&output, i));
     }
+    printf("\n");
+    vec_byte_del(&output);
 
     asm_delete(&assembler);
     tokenizer_delete(&tokenizer);

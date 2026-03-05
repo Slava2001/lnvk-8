@@ -57,7 +57,7 @@ typedef struct Token
     {
         uint16_t const_val;
         uint16_t address;
-        int reg;
+        uint8_t reg;
         struct {
             const char *name;
             size_t len;

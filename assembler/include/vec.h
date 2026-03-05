@@ -20,7 +20,9 @@ size_t vec_ ## func_suffix ## _length(Vec ## type_suffix *this);          \
 void vec_ ## func_suffix ## _replace_range(                               \
     Vec ## type_suffix *this,                                             \
     const type *val, size_t val_cnt,                                      \
-    size_t start_index, size_t end_index);
+    size_t start_index, size_t end_index);                                \
+void vec_ ## func_suffix ## _clear(Vec ## type_suffix *this);
+
 
 #define vec_impl(type, type_suffix, func_suffix)                                    \
 Vec ## type_suffix vec_ ## func_suffix ## _new(void) {                              \
@@ -59,7 +61,8 @@ type vec_ ## func_suffix ## _pop(Vec ## type_suffix *this) {                    
 }                                                                                   \
 type *vec_ ## func_suffix ## _at(Vec ## type_suffix *this, size_t index) {          \
     logenter();                                                                     \
-    die(index >= this->size, "index %zu out of range 0-%zu", index, this->size);    \
+    die(index >= this->size, "get element. Index %zu out of range 0-%zu",           \
+                             index, this->size);                                    \
     return &this->data[index];                                                      \
 }                                                                                   \
 void vec_ ## func_suffix ## _del(Vec ## type_suffix *this) {                        \
@@ -100,6 +103,9 @@ void vec_ ## func_suffix ## _replace_range(                                     
         this->data[pos + i] = val[i];                                               \
     }                                                                               \
     this->size = (size_t)((ssize_t)this->size + shift);                             \
+}                                                                                   \
+void vec_ ## func_suffix ## _clear(Vec ## type_suffix *this) {                      \
+    this->size = 0;                                                                 \
 }
 
 #endif // VEC_H

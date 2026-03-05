@@ -3,13 +3,17 @@
 
 #include "tokenizer.h"
 #include "errors.h"
+#include "vec.h"
+
+vec_decl(uint8_t, Byte, byte);
+vec_decl(Token, Token, token);
 
 typedef struct Asm {
     Tokenizer *tokenizer;
 } Asm;
 
 Asm asm_new(Tokenizer *tokenizer);
-ssize_t asm_assemble(Asm *this, uint8_t *output, size_t output_size);
+int asm_assemble(Asm *this, VecByte *buf);
 void asm_delete(Asm *this);
 
 #endif // ASM_H

@@ -2,16 +2,21 @@
 #define GRAMMAR_H
 
 #include "tokenizer.h"
+#include "asm.h"
+#include "vec.h"
 
-typedef size_t (*encoder_t)(const Token *tokens, size_t len, uint8_t *output, size_t output_size);
-
-typedef struct GrammarNode GrammarNode;
-struct GrammarNode {
-    encoder_t encoder;
-    GrammarNode *next[TOK_COUNT];
+struct EncodeCtx {
+    VecByte *buff;
+    VecToken *toks;
 };
 
-GrammarNode* grammar_new(void);
-void grammar_delete(GrammarNode* this);
+typedef int (*leaf_cb)(struct EncodeCtx *encode_ctx);
+
+struct GrammarTreeNode {
+    struct GrammarTreeNode *next[TOK_COUNT];
+    leaf_cb cb;
+};
+
+extern const struct GrammarTreeNode grammar_tree;
 
 #endif // GRAMMAR_H

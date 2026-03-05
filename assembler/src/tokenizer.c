@@ -37,7 +37,7 @@ int parse_next_word(const char *word, size_t len, Token *out) {
     struct {
         const char *str;
         enum TokenType tok;
-        int reg;
+        uint8_t reg;
     } words[] = {
         { .str = "r0",   .tok = TOK_REG, .reg = 0  },
         { .str = "r1",   .tok = TOK_REG, .reg = 1  },
