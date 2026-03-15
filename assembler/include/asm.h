@@ -4,8 +4,8 @@
 #include "tokenizer.h"
 #include "errors.h"
 #include "vec.h"
+#include "types.h"
 
-vec_decl(uint8_t, Byte, byte);
 vec_decl(Token, Token, token);
 
 typedef struct Asm {

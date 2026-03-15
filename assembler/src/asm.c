@@ -3,7 +3,6 @@
 #include "grammar.h"
 
 vec_impl(Token, Token, token);
-vec_impl(uint8_t, Byte, byte);
 
 Asm asm_new(Tokenizer *tokenizer) {
     return (Asm) {
@@ -12,8 +11,10 @@ Asm asm_new(Tokenizer *tokenizer) {
 }
 
 int asm_assemble(Asm *this, VecByte *buff) {
+    LabelResolver labels = label_resolver_init();
     VecToken tokens = vec_token_new();
     struct EncodeCtx encode_ctx = {
+        .labels = &labels,
         .buff = buff,
         .toks = &tokens
     };
@@ -27,6 +28,8 @@ int asm_assemble(Asm *this, VecByte *buff) {
             break;
         }
         if (token.type == TOK_EOF) {
+            rv = label_resolver_resolve(&labels, buff);
+            label_resolver_delete(&labels);
             break;
         }
         vec_token_push(&tokens, token);

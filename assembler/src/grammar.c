@@ -7,6 +7,7 @@ int encode_op_reg(VecByte *buff, uint8_t op, uint8_t rd);
 int encode_op_reg_imm8(VecByte *buff, uint8_t op, uint8_t rd, uint8_t imm);
 int encode_op_reg_reg_reg(VecByte *buff, uint8_t op, uint8_t rd, uint8_t rs1, uint8_t rs2);
 int encode_op_reg_imm16(VecByte *buff, uint8_t op, uint8_t rd, uint16_t imm);
+int encode_op_imm16(VecByte *buff, uint8_t op, uint16_t imm);
 
 int en_nop(struct EncodeCtx *encode_ctx);
 int en_halt(struct EncodeCtx *encode_ctx);
@@ -115,7 +116,6 @@ const struct GrammarTreeNode grammar_tree = {
     }
 };
 
-
 // ============================================================================
 // ENCODE FUNCTIONS
 // ============================================================================
@@ -159,17 +159,22 @@ int encode_op_reg_imm16(VecByte *buff, uint8_t op, uint8_t rd, uint16_t imm) {
     return 0;
 }
 
+int encode_op_imm16(VecByte *buff, uint8_t op, uint16_t imm) {
+    vec_byte_push(buff, op);
+    vec_byte_push(buff, (uint8_t)((imm >> 8) & 0xFF));
+    vec_byte_push(buff, (uint8_t)(imm & 0xFF));
+    return 0;
+}
+
 // ============================================================================
 // ENCODE CALLBACK FUNCTIONS
 // ============================================================================
 
 int en_nop(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
     return encode_op(encode_ctx->buff, 0x00);
 }
 
 int en_halt(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
     return encode_op(encode_ctx->buff, 0x04);
 }
 
@@ -192,8 +197,15 @@ int en_mov_reg_addr_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_mov_reg_addr_label(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *rd = vec_token_at(encode_ctx->toks, 1);
+    Token *label = vec_token_at(encode_ctx->toks, 2);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 2
+    );
+    return encode_op_reg_imm16(encode_ctx->buff, 0x38, rd->data.reg, 0xFFFF);
 }
 
 int en_mov_reg_addr_regs(struct EncodeCtx *encode_ctx) {
@@ -219,8 +231,15 @@ int en_mov_addr_const_reg(struct EncodeCtx *encode_ctx) {
 }
 
 int en_mov_addr_label_reg(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *rd = vec_token_at(encode_ctx->toks, 1);
+    Token *label = vec_token_at(encode_ctx->toks, 2);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 2
+    );
+    return encode_op_reg_imm16(encode_ctx->buff, 0x3C, rd->data.reg, 0xFFFF);
 }
 
 int en_push(struct EncodeCtx *encode_ctx) {
@@ -317,8 +336,14 @@ int en_jmp_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_jmp_label_ref(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, 0xC0, 0xFFFF);
 }
 
 int en_jr_addr_regs(struct EncodeCtx *encode_ctx) {
@@ -333,8 +358,14 @@ int en_jz_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_jz_label_ref(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, 0xC8, 0xFFFF);
 }
 
 int en_jnz_const(struct EncodeCtx *encode_ctx) {
@@ -343,8 +374,14 @@ int en_jnz_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_jnz_label_ref(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, 0xCC, 0xFFFF);
 }
 
 int en_jc_const(struct EncodeCtx *encode_ctx) {
@@ -353,8 +390,14 @@ int en_jc_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_jc_label_ref(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, 0xD0, 0xFFFF);
 }
 
 int en_jnc_const(struct EncodeCtx *encode_ctx) {
@@ -363,8 +406,14 @@ int en_jnc_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_jnc_label_ref(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, 0xD4, 0xFFFF);
 }
 
 int en_call_const(struct EncodeCtx *encode_ctx) {
@@ -373,8 +422,14 @@ int en_call_const(struct EncodeCtx *encode_ctx) {
 }
 
 int en_call_label_ref(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, 0xD8, 0xFFFF);
 }
 
 int en_ret(struct EncodeCtx *encode_ctx) {
@@ -382,6 +437,12 @@ int en_ret(struct EncodeCtx *encode_ctx) {
 }
 
 int en_label_def(struct EncodeCtx *encode_ctx) {
-    UNUSED(encode_ctx);
-    return -1;
+    Token *label = vec_token_at(encode_ctx->toks, 0);
+    label_resolver_define(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff)
+    );
+    return 0;
 }

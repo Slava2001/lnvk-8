@@ -4,8 +4,10 @@
 #include "tokenizer.h"
 #include "asm.h"
 #include "vec.h"
+#include "label_resolver.h"
 
 struct EncodeCtx {
+    LabelResolver *labels;
     VecByte *buff;
     VecToken *toks;
 };

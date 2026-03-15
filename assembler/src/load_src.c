@@ -5,7 +5,6 @@
 #include <ctype.h>
 
 vec_impl(Define, Define, define);
-vec_impl(char, Char, char);
 vec_impl(SrcFile, SrcFile, srcfile);
 vec_impl(Line, Line, line);
 

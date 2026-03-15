@@ -3,12 +3,12 @@
 
 #include "util.h"
 #include "vec.h"
+#include "types.h"
 
 typedef struct SrcFile SrcFile;
 typedef struct Line Line;
 typedef struct Define Define;
 
-vec_decl(char, Char, char);
 vec_decl(SrcFile, SrcFile, srcfile);
 vec_decl(Line, Line, line);
 vec_decl(Define, Define, define);
