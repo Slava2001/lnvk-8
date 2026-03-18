@@ -13,20 +13,38 @@ Tokenizer tokenizer_new(SourceTree *src) {
     };
 }
 
+// -1 - error, 0 - end of tokens, 1 - ok
 int get_next_word(Tokenizer *this, const char **next, size_t *next_len);
 int parse_next_word(const char *word, size_t len, Token *out);
 
 int get_next_word(Tokenizer *this, const char **next, size_t *next_len) {
     while (1) {
         if (this->line >= vec_line_length(&this->src->lines)) {
-            return -1;
+            return 0;
         }
         Line *current_line = vec_line_at(&this->src->lines, this->line);
         *next = vec_char_at(&current_line->text, this->offset);
         if (**next) {
-            *next_len = strcspn(*next, DELIMETER_CHARS);
-            this->offset += *next_len + strspn(*next + *next_len, DELIMETER_CHARS);
-            return 0;
+            size_t rest_chars = vec_char_length(&current_line->text) - this->offset;
+            size_t len = 0;
+
+            const char *ptr = *next;
+            int in_quote = 0;
+            while (rest_chars &&
+                   (in_quote || !strchr(DELIMETER_CHARS, *ptr)))
+            {
+                if (*ptr == '\"') {
+                    in_quote = !in_quote;
+                }
+                ptr++;
+                rest_chars--;
+                len++;
+            }
+            reci(!rest_chars && in_quote, "get next word: unexpected end of string literal");
+
+            *next_len = len;
+            this->offset += len + strspn(*next + *next_len, DELIMETER_CHARS);
+            return 1;
         }
         this->line++;
         this->offset = 0;
@@ -113,7 +131,8 @@ int parse_next_word(const char *word, size_t len, Token *out) {
         { .str = "jc",   .tok = TOK_KW_JC   },
         { .str = "jnc",  .tok = TOK_KW_JNC  },
         { .str = "call", .tok = TOK_KW_CALL },
-        { .str = "ret",  .tok = TOK_KW_RET  }
+        { .str = "ret",  .tok = TOK_KW_RET  },
+        { .str = "db",   .tok = TOK_KW_DB   }
     };
 
     for (size_t i = 0; i < sizeof(words)/sizeof(*words); i++) {
@@ -178,6 +197,27 @@ int parse_next_word(const char *word, size_t len, Token *out) {
         }
     }
 
+    if (word[0] == '\"' && word[len - 1] == '\"') {
+        *out = (Token) {
+            .type = TOK_STR,
+            .word = word,
+            .len = len,
+            .data.str.ptr = &word[1],
+            .data.str.len = len - 2
+        };
+        return 0;
+    }
+
+    if (len == 3 && word[0] == '\'' && word[2] == '\'') {
+        *out = (Token) {
+            .type = TOK_CONST,
+            .word = word,
+            .len = len,
+            .data.const_val = (uint16_t)word[1]
+        };
+        return 0;
+    }
+
     char *end;
     long tmp_value = strtol(tmp, &end, 0);
     if (!*end) {
@@ -214,11 +254,20 @@ Token tokenizer_next(Tokenizer *this) {
     const char *next = NULL;
     size_t next_len = 0;
 
-    if (get_next_word(this, &next, &next_len)) {
+    int rv = get_next_word(this, &next, &next_len);
+    if (rv < 0) {
+        Line *l = vec_line_at(&this->src->lines, this->line);
+        SrcFile *f = vec_srcfile_at(&this->src->files, l->file_index);
+        loge("Failed to get next word: %.*s from %s:%zu %.*s",
+             (int)next_len, next, f->name.data, l->number, (int)l->text.size, l->text.data);
+        return (Token) { .type = TOK_UNKNOWN };
+    }
+    if (!rv) {
         return (Token) { .type = TOK_EOF };
     }
+
     Token token = { .type = TOK_UNKNOWN, .word = next, .len = next_len };
-    int rv = parse_next_word(next, next_len, &token);
+    rv = parse_next_word(next, next_len, &token);
 
     if (rv || token.type == TOK_UNKNOWN) {
         Line *l = vec_line_at(&this->src->lines, this->line);

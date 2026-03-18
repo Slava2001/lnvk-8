@@ -34,7 +34,9 @@ enum TokenType {
     TOK_KW_JNC,
     TOK_KW_CALL,
     TOK_KW_RET,
+    TOK_KW_DB,
     TOK_REG,
+    TOK_STR,
     TOK_LABEL_DEF,
     TOK_LABEL_REF,
     TOK_CONST,
@@ -58,6 +60,10 @@ typedef struct Token
         uint16_t const_val;
         uint16_t address;
         uint8_t reg;
+        struct {
+            const char *ptr;
+            size_t len;
+        } str;
         struct {
             const char *name;
             size_t len;

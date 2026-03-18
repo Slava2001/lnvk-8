@@ -40,6 +40,7 @@ int asm_assemble(Asm *this, VecByte *buff) {
                 Token *t = vec_token_at(&tokens, i);
                 loge("%-15s (%.*s)", token_type_to_str(t->type), (int)t->len, t->word);
             }
+            return -1;
         }
 
         node = node->next[token.type];

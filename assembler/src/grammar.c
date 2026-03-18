@@ -8,6 +8,7 @@ int encode_op_reg_imm8(VecByte *buff, uint8_t op, uint8_t rd, uint8_t imm);
 int encode_op_reg_reg_reg(VecByte *buff, uint8_t op, uint8_t rd, uint8_t rs1, uint8_t rs2);
 int encode_op_reg_imm16(VecByte *buff, uint8_t op, uint8_t rd, uint16_t imm);
 int encode_op_imm16(VecByte *buff, uint8_t op, uint16_t imm);
+int encode_imm(VecByte *buff, uint8_t imm);
 
 int en_nop(struct EncodeCtx *encode_ctx);
 int en_halt(struct EncodeCtx *encode_ctx);
@@ -49,6 +50,8 @@ int en_jnc_label_ref(struct EncodeCtx *encode_ctx);
 int en_call_const(struct EncodeCtx *encode_ctx);
 int en_call_label_ref(struct EncodeCtx *encode_ctx);
 int en_ret(struct EncodeCtx *encode_ctx);
+int en_db_const(struct EncodeCtx *encode_ctx);
+int en_db_str(struct EncodeCtx *encode_ctx);
 int en_label_def(struct EncodeCtx *encode_ctx);
 
 #define N(tok, ...) [tok] = &(struct GrammarTreeNode) { .next = { __VA_ARGS__ } }
@@ -112,6 +115,10 @@ const struct GrammarTreeNode grammar_tree = {
             L(TOK_LABEL_REF, en_call_label_ref)
         ),
         L(TOK_KW_RET, en_ret),
+        N(TOK_KW_DB,
+            L(TOK_CONST, en_db_const),
+            L(TOK_STR, en_db_str)
+        ),
         L(TOK_LABEL_DEF, en_label_def)
     }
 };
@@ -166,6 +173,11 @@ int encode_op_imm16(VecByte *buff, uint8_t op, uint16_t imm) {
     return 0;
 }
 
+int encode_imm(VecByte *buff, uint8_t imm) {
+    vec_byte_push(buff, (uint8_t)imm);
+    return 0;
+}
+
 // ============================================================================
 // ENCODE CALLBACK FUNCTIONS
 // ============================================================================
@@ -187,7 +199,9 @@ int en_mov_reg_reg(struct EncodeCtx *encode_ctx) {
 int en_mov_reg_const(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *imm = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_imm8(encode_ctx->buff, 0x26, rd->data.reg, (uint8_t)imm->data.const_val);
+    uint16_t val = imm->data.const_val;
+    reci(val > UINT8_MAX, "encode const value: out range: val: %d range: 0..%d", val, UINT8_MAX);
+    return encode_op_reg_imm8(encode_ctx->buff, 0x26, rd->data.reg, (uint8_t)val);
 }
 
 int en_mov_reg_addr_const(struct EncodeCtx *encode_ctx) {
@@ -434,6 +448,23 @@ int en_call_label_ref(struct EncodeCtx *encode_ctx) {
 
 int en_ret(struct EncodeCtx *encode_ctx) {
     return encode_op(encode_ctx->buff, 0xDC);
+}
+
+int en_db_const(struct EncodeCtx *encode_ctx) {
+    Token *imm = vec_token_at(encode_ctx->toks, 1);
+    uint16_t val = imm->data.const_val;
+    reci(val > UINT8_MAX, "encode const value: out range: val: %d range: 0..%d", val, UINT8_MAX);
+    return encode_imm(encode_ctx->buff, (uint8_t)val);
+}
+
+int en_db_str(struct EncodeCtx *encode_ctx) {
+    Token *str = vec_token_at(encode_ctx->toks, 1);
+    for (size_t i = 0; i < str->data.str.len; i++) {
+        reci(encode_imm(encode_ctx->buff, (uint8_t)str->data.str.ptr[i]),
+             "encode char \'%c\' (code: %d, index: %zu) from string: %.*s", str->data.str.ptr[i],
+             str->data.str.ptr[i], i, (int)str->data.str.len, str->data.str.ptr);
+    }
+    return 0;
 }
 
 int en_label_def(struct EncodeCtx *encode_ctx) {
