@@ -32,6 +32,8 @@ enum TokenType {
     TOK_KW_JNZ,
     TOK_KW_JC,
     TOK_KW_JNC,
+    TOK_KW_JS,
+    TOK_KW_JNS,
     TOK_KW_CALL,
     TOK_KW_RET,
     TOK_KW_DB,

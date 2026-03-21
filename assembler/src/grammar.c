@@ -47,6 +47,10 @@ int en_jc_const(struct EncodeCtx *encode_ctx);
 int en_jc_label_ref(struct EncodeCtx *encode_ctx);
 int en_jnc_const(struct EncodeCtx *encode_ctx);
 int en_jnc_label_ref(struct EncodeCtx *encode_ctx);
+int en_js_const(struct EncodeCtx *encode_ctx);
+int en_js_label_ref(struct EncodeCtx *encode_ctx);
+int en_jns_const(struct EncodeCtx *encode_ctx);
+int en_jns_label_ref(struct EncodeCtx *encode_ctx);
 int en_call_const(struct EncodeCtx *encode_ctx);
 int en_call_label_ref(struct EncodeCtx *encode_ctx);
 int en_ret(struct EncodeCtx *encode_ctx);
@@ -109,6 +113,14 @@ const struct GrammarTreeNode grammar_tree = {
         N(TOK_KW_JNC,
             L(TOK_CONST, en_jnc_const),
             L(TOK_LABEL_REF, en_jnc_label_ref)
+        ),
+        N(TOK_KW_JS,
+            L(TOK_CONST, en_js_const),
+            L(TOK_LABEL_REF, en_js_label_ref)
+        ),
+        N(TOK_KW_JNS,
+            L(TOK_CONST, en_jns_const),
+            L(TOK_LABEL_REF, en_jns_label_ref)
         ),
         N(TOK_KW_CALL,
             L(TOK_CONST, en_call_const),
@@ -183,17 +195,17 @@ int encode_imm(VecByte *buff, uint8_t imm) {
 // ============================================================================
 
 int en_nop(struct EncodeCtx *encode_ctx) {
-    return encode_op(encode_ctx->buff, 0x00);
+    return encode_op(encode_ctx->buff, OP_NOP);
 }
 
 int en_halt(struct EncodeCtx *encode_ctx) {
-    return encode_op(encode_ctx->buff, 0x04);
+    return encode_op(encode_ctx->buff, OP_HALT);
 }
 
 int en_mov_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x21, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_MOV, rd->data.reg, rs->data.reg);
 }
 
 int en_mov_reg_const(struct EncodeCtx *encode_ctx) {
@@ -201,13 +213,13 @@ int en_mov_reg_const(struct EncodeCtx *encode_ctx) {
     Token *imm = vec_token_at(encode_ctx->toks, 2);
     uint16_t val = imm->data.const_val;
     reci(val > UINT8_MAX, "encode const value: out range: val: %d range: 0..%d", val, UINT8_MAX);
-    return encode_op_reg_imm8(encode_ctx->buff, 0x26, rd->data.reg, (uint8_t)val);
+    return encode_op_reg_imm8(encode_ctx->buff, OP_MOV_IMM, rd->data.reg, (uint8_t)val);
 }
 
 int en_mov_reg_addr_const(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *addr = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_imm16(encode_ctx->buff, 0x38, rd->data.reg, addr->data.address);
+    return encode_op_reg_imm16(encode_ctx->buff, OP_MOV_ADDR, rd->data.reg, addr->data.address);
 }
 
 int en_mov_reg_addr_label(struct EncodeCtx *encode_ctx) {
@@ -219,7 +231,7 @@ int en_mov_reg_addr_label(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 2
     );
-    return encode_op_reg_imm16(encode_ctx->buff, 0x38, rd->data.reg, 0xFFFF);
+    return encode_op_reg_imm16(encode_ctx->buff, OP_MOV_ADDR, rd->data.reg, 0xFFFF);
 }
 
 int en_mov_reg_addr_regs(struct EncodeCtx *encode_ctx) {
@@ -227,7 +239,7 @@ int en_mov_reg_addr_regs(struct EncodeCtx *encode_ctx) {
     Token *rs1 = vec_token_at(encode_ctx->toks, 2);
     Token *rs2 = vec_token_at(encode_ctx->toks, 3);
     return encode_op_reg_reg_reg(encode_ctx->buff,
-                                 0x2A, rd->data.reg, rs1->data.reg, rs2->data.reg);
+                                 OP_MOV_REG, rd->data.reg, rs1->data.reg, rs2->data.reg);
 }
 
 int en_mov_addr_regs_reg(struct EncodeCtx *encode_ctx) {
@@ -235,13 +247,13 @@ int en_mov_addr_regs_reg(struct EncodeCtx *encode_ctx) {
     Token *rd2 = vec_token_at(encode_ctx->toks, 2);
     Token *rs = vec_token_at(encode_ctx->toks, 3);
     return encode_op_reg_reg_reg(encode_ctx->buff,
-                                 0x2E, rs->data.reg, rd1->data.reg, rd2->data.reg);
+                                 OP_MOV_MEM, rs->data.reg, rd1->data.reg, rd2->data.reg);
 }
 
 int en_mov_addr_const_reg(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_imm16(encode_ctx->buff, 0x3C, rs->data.reg, addr->data.address);
+    return encode_op_reg_imm16(encode_ctx->buff, OP_MOV_MEM2, rs->data.reg, addr->data.address);
 }
 
 int en_mov_addr_label_reg(struct EncodeCtx *encode_ctx) {
@@ -253,100 +265,100 @@ int en_mov_addr_label_reg(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 2
     );
-    return encode_op_reg_imm16(encode_ctx->buff, 0x3C, rd->data.reg, 0xFFFF);
+    return encode_op_reg_imm16(encode_ctx->buff, OP_MOV_MEM2, rd->data.reg, 0xFFFF);
 }
 
 int en_push(struct EncodeCtx *encode_ctx) {
     Token *rs = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_reg(encode_ctx->buff, 0x31, 0, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_PUSH, 0, rs->data.reg);
 }
 
 int en_pop(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_reg(encode_ctx->buff, 0x35, rd->data.reg, 0);
+    return encode_op_reg_reg(encode_ctx->buff, OP_POP, rd->data.reg, 0);
 }
 
 int en_add_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x41, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_ADD, rd->data.reg, rs->data.reg);
 }
 
 int en_adc_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x45, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_ADC, rd->data.reg, rs->data.reg);
 }
 
 int en_sub_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x49, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_SUB, rd->data.reg, rs->data.reg);
 }
 
 int en_sbc_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x4D, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_SBC, rd->data.reg, rs->data.reg);
 }
 
 int en_inc_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_reg(encode_ctx->buff, 0x41, rd->data.reg, rd->data.reg);
+    return encode_op_reg(encode_ctx->buff, OP_INC, rd->data.reg);
 }
 
 int en_dec_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_reg(encode_ctx->buff, 0x49, rd->data.reg, rd->data.reg);
+    return encode_op_reg(encode_ctx->buff, OP_DEC, rd->data.reg);
 }
 
 int en_neg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_reg(encode_ctx->buff, 0x4B, rd->data.reg, rd->data.reg);
+    return encode_op_reg(encode_ctx->buff, OP_NOT, rd->data.reg);
 }
 
 int en_shl_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg(encode_ctx->buff, 0x4C, rd->data.reg);
+    return encode_op_reg(encode_ctx->buff, OP_SHL, rd->data.reg);
 }
 
 int en_shr_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg(encode_ctx->buff, 0x4D, rd->data.reg);
+    return encode_op_reg(encode_ctx->buff, OP_SHR, rd->data.reg);
 }
 
 int en_and_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x4E, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_AND, rd->data.reg, rs->data.reg);
 }
 
 int en_or_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x4F, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_OR, rd->data.reg, rs->data.reg);
 }
 
 int en_xor_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x50, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_XOR, rd->data.reg, rs->data.reg);
 }
 
 int en_not_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_reg(encode_ctx->buff, 0x51, rd->data.reg, rd->data.reg);
+    return encode_op_reg(encode_ctx->buff, OP_NOT, rd->data.reg);
 }
 
 int en_cmp_reg_reg(struct EncodeCtx *encode_ctx) {
     Token *rd = vec_token_at(encode_ctx->toks, 1);
     Token *rs = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0x52, rd->data.reg, rs->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_CMP, rd->data.reg, rs->data.reg);
 }
 
 int en_jmp_const(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_imm16(encode_ctx->buff, 0xC0, 0, addr->data.address);
+    return encode_op_imm16(encode_ctx->buff, OP_JMP, addr->data.address);
 }
 
 int en_jmp_label_ref(struct EncodeCtx *encode_ctx) {
@@ -357,18 +369,18 @@ int en_jmp_label_ref(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 1
     );
-    return encode_op_imm16(encode_ctx->buff, 0xC0, 0xFFFF);
+    return encode_op_imm16(encode_ctx->buff, OP_JMP, 0xFFFF);
 }
 
 int en_jr_addr_regs(struct EncodeCtx *encode_ctx) {
     Token *rs1 = vec_token_at(encode_ctx->toks, 1);
     Token *rs2 = vec_token_at(encode_ctx->toks, 2);
-    return encode_op_reg_reg(encode_ctx->buff, 0xC5, rs1->data.reg, rs2->data.reg);
+    return encode_op_reg_reg(encode_ctx->buff, OP_JR, rs1->data.reg, rs2->data.reg);
 }
 
 int en_jz_const(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_imm16(encode_ctx->buff, 0xC8, 0, addr->data.address);
+    return encode_op_imm16(encode_ctx->buff, OP_JZ, addr->data.address);
 }
 
 int en_jz_label_ref(struct EncodeCtx *encode_ctx) {
@@ -379,12 +391,12 @@ int en_jz_label_ref(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 1
     );
-    return encode_op_imm16(encode_ctx->buff, 0xC8, 0xFFFF);
+    return encode_op_imm16(encode_ctx->buff, OP_JZ, 0xFFFF);
 }
 
 int en_jnz_const(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_imm16(encode_ctx->buff, 0xCC, 0, addr->data.address);
+    return encode_op_imm16(encode_ctx->buff, OP_JNZ, addr->data.address);
 }
 
 int en_jnz_label_ref(struct EncodeCtx *encode_ctx) {
@@ -395,12 +407,12 @@ int en_jnz_label_ref(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 1
     );
-    return encode_op_imm16(encode_ctx->buff, 0xCC, 0xFFFF);
+    return encode_op_imm16(encode_ctx->buff, OP_JNZ, 0xFFFF);
 }
 
 int en_jc_const(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_imm16(encode_ctx->buff, 0xD0, 0, addr->data.address);
+    return encode_op_imm16(encode_ctx->buff, OP_JC, addr->data.address);
 }
 
 int en_jc_label_ref(struct EncodeCtx *encode_ctx) {
@@ -411,12 +423,12 @@ int en_jc_label_ref(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 1
     );
-    return encode_op_imm16(encode_ctx->buff, 0xD0, 0xFFFF);
+    return encode_op_imm16(encode_ctx->buff, OP_JC, 0xFFFF);
 }
 
 int en_jnc_const(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_imm16(encode_ctx->buff, 0xD4, 0, addr->data.address);
+    return encode_op_imm16(encode_ctx->buff, OP_JNC, addr->data.address);
 }
 
 int en_jnc_label_ref(struct EncodeCtx *encode_ctx) {
@@ -427,12 +439,44 @@ int en_jnc_label_ref(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 1
     );
-    return encode_op_imm16(encode_ctx->buff, 0xD4, 0xFFFF);
+    return encode_op_imm16(encode_ctx->buff, OP_JNC, 0xFFFF);
+}
+
+int en_js_const(struct EncodeCtx *encode_ctx) {
+    Token *addr = vec_token_at(encode_ctx->toks, 1);
+    return encode_op_imm16(encode_ctx->buff, OP_JS, addr->data.address);
+}
+
+int en_js_label_ref(struct EncodeCtx *encode_ctx) {
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, OP_JS, 0xFFFF);
+}
+
+int en_jns_const(struct EncodeCtx *encode_ctx) {
+    Token *addr = vec_token_at(encode_ctx->toks, 1);
+    return encode_op_imm16(encode_ctx->buff, OP_JNS, addr->data.address);
+}
+
+int en_jns_label_ref(struct EncodeCtx *encode_ctx) {
+    Token *label = vec_token_at(encode_ctx->toks, 1);
+    label_resolver_request(
+        encode_ctx->labels,
+        label->data.label.name,
+        label->data.label.len,
+        vec_byte_length(encode_ctx->buff) + 1
+    );
+    return encode_op_imm16(encode_ctx->buff, OP_JNS, 0xFFFF);
 }
 
 int en_call_const(struct EncodeCtx *encode_ctx) {
     Token *addr = vec_token_at(encode_ctx->toks, 1);
-    return encode_op_reg_imm16(encode_ctx->buff, 0xD8, 0, addr->data.address);
+    return encode_op_imm16(encode_ctx->buff, OP_CALL, addr->data.address);
 }
 
 int en_call_label_ref(struct EncodeCtx *encode_ctx) {
@@ -443,11 +487,11 @@ int en_call_label_ref(struct EncodeCtx *encode_ctx) {
         label->data.label.len,
         vec_byte_length(encode_ctx->buff) + 1
     );
-    return encode_op_imm16(encode_ctx->buff, 0xD8, 0xFFFF);
+    return encode_op_imm16(encode_ctx->buff, OP_CALL, 0xFFFF);
 }
 
 int en_ret(struct EncodeCtx *encode_ctx) {
-    return encode_op(encode_ctx->buff, 0xDC);
+    return encode_op(encode_ctx->buff, OP_RET);
 }
 
 int en_db_const(struct EncodeCtx *encode_ctx) {

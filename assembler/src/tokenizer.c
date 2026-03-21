@@ -130,6 +130,8 @@ int parse_next_word(const char *word, size_t len, Token *out) {
         { .str = "jnz",  .tok = TOK_KW_JNZ  },
         { .str = "jc",   .tok = TOK_KW_JC   },
         { .str = "jnc",  .tok = TOK_KW_JNC  },
+        { .str = "js",   .tok = TOK_KW_JS   },
+        { .str = "jns",  .tok = TOK_KW_JNS  },
         { .str = "call", .tok = TOK_KW_CALL },
         { .str = "ret",  .tok = TOK_KW_RET  },
         { .str = "db",   .tok = TOK_KW_DB   }
